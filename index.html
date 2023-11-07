@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>
+      Example showing the problem in Firefox to reliably detect when the caret
+      is at an end of a textinput
+    </title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+  </head>
+  <body>
+    <div class="container mt-3">
+      <h1>
+        Example showing the problem in Firefox to reliably detect when the caret
+        is at an end of a textinput
+      </h1>
+      <div>
+        <p>
+          In Firefox (tested in version 119), unlike Chrome and Webkit, when a
+          text input starts or ends with some text that is in the opposite
+          direction than the one of the full text input (left-to-right or
+          right-to-left), checking whether selectionStart and selectionEnd is 0
+          or value.length does not allow to detect reliably if the caret is at
+          an end of the text input.
+        </p>
+        <p>
+          Similarly, calling setSelectionRange with 0 or value.length does not
+          allow to reliably set the caret at the beginning or the end of the
+          text input.
+        </p>
+        <p>
+          This is demonstrated in the following field. In Chrome and Webkit, it
+          is possible to use the right arrow key (repeatedly) to navigate from
+          "Button before" to "Button after" passing through all the characters
+          of the two text inputs (and similarly the left arrow key to go in the
+          opposite direction). This does not work in Firefox.
+        </p>
+      </div>
+      <div class="mb-3">Navigate between the following items with arrows:</div>
+      <div class="input-group mb-3">
+        <button class="btn btn-outline-secondary" type="button" autofocus>
+          Button before
+        </button>
+        <input
+          class="form-control"
+          type="text"
+          value="There is no problem here"
+        />
+        <input
+          class="form-control"
+          type="text"
+          value="יש כאן בעיה בפיירפוקס There is a problem with Firefox here"
+        />
+        <button class="btn btn-outline-secondary" type="button">
+          Button after
+        </button>
+      </div>
+    </div>
+    <script type="application/javascript">
+      const getEndPosition = (input, move) => {
+        const direction = getComputedStyle(input).direction;
+        if (direction === "rtl") {
+          move = -move;
+        }
+        return move < 0 ? 0 : input.value.length;
+      };
+      document.body.addEventListener("keydown", (event) => {
+        let move = 0;
+        if (event.key === "ArrowLeft") {
+          move = -1;
+        } else if (event.key === "ArrowRight") {
+          move = 1;
+        }
+        if (move != 0) {
+          const target = event.target;
+          const inputGroup = target.closest(".input-group");
+          const navItems = [...inputGroup?.querySelectorAll("input,button")];
+          if (target instanceof HTMLInputElement && target.type == "text") {
+            const currentPosition =
+              target.selectionStart === target.selectionEnd
+                ? target.selectionStart
+                : null;
+            if (currentPosition !== getEndPosition(target, move)) {
+              return;
+            }
+          }
+          let currentIndex = navItems.indexOf(event.target);
+          let newIndex = currentIndex + move;
+          if (newIndex >= 0 && newIndex < navItems.length) {
+            const newItem = navItems[newIndex];
+            event.preventDefault();
+            newItem.focus();
+            if (newItem instanceof HTMLInputElement && target.type === "text") {
+              const position = getEndPosition(newItem, -move);
+              newItem.setSelectionRange(position, position);
+            }
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
